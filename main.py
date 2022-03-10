@@ -171,5 +171,16 @@ class App(TKMT.ThemedTKinterFrame):
                 self.hNameVar.set(self.headerTreeview.item(sel[0])['text'])
                 self.hValueVar.set(self.headerTreeview.item(sel[0])['values'][0])
 
+    def handleExit(self):
+        savedata = {
+            'baseurl': self.baseURL.get(),
+            'requrl': self.reqURL.get(),
+            'params': self.params,
+            'headers': self.headers
+        }
+        with open('savedata.json', 'w+') as f:
+            json.dump(savedata, f, indent=4)
+        TKMT.ThemedTKinterFrame.handleExit(self)
+
 if __name__ == '__main__':
     app = App()
