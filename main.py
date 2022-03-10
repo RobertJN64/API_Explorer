@@ -38,7 +38,7 @@ class App(TKMT.ThemedTKinterFrame):
 
         self.paramTab.Text("Parameter Name", col=0)
         self.paramTab.Entry(self.pNameVar, col=1)
-        self.paramTab.Button("Add Parameter", command=self.add_param, col=2)
+        self.paramTab.Button("Add/Update Parameter", command=self.add_param, col=2)
 
         self.paramTab.Text("Parameter Value", col=0)
         self.paramTab.Entry(self.pValueVar, col=1)
@@ -53,7 +53,7 @@ class App(TKMT.ThemedTKinterFrame):
 
         self.headerTab.Text("Header Name", col=0)
         self.headerTab.Entry(self.hNameVar, col=1)
-        self.headerTab.Button("Add Header", command=self.add_header, col=2)
+        self.headerTab.Button("Add/Update Header", command=self.add_header, col=2)
 
         self.headerTab.Text("Header Value", col=0)
         self.headerTab.Entry(self.hValueVar, col=1)
@@ -115,6 +115,12 @@ class App(TKMT.ThemedTKinterFrame):
         udpate_treeview(self.treeviewwidget, make_treeview(self.reqDB[name]))
 
     def add_param(self):
+        if self.pNameVar.get() in self.params:
+            children = self.paramTreeview.get_children()
+            for child in children:
+                if self.paramTreeview.item(child)['text'] == self.pNameVar.get():
+                    self.paramTreeview.delete(child)
+
         self.params[self.pNameVar.get()] = self.pValueVar.get()
         self.paramTreeview.insert('', 'end', text=self.pNameVar.get(), values=[self.pValueVar.get()])
         self.pNameVar.set("")
@@ -123,10 +129,16 @@ class App(TKMT.ThemedTKinterFrame):
     def del_param(self):
         sel = self.paramTreeview.selection()
         if len(sel) > 0:
-            self.paramTreeview.delete(sel[0])
             self.params.pop(self.paramTreeview.item(sel[0])['text'])
+            self.paramTreeview.delete(sel[0])
 
     def add_header(self):
+        if self.hNameVar.get() in self.headers:
+            children = self.headerTreeview.get_children()
+            for child in children:
+                if self.headerTreeview.item(child)['text'] == self.hNameVar.get():
+                    self.headerTreeview.delete(child)
+
         self.headers[self.hNameVar.get()] = self.hValueVar.get()
         self.headerTreeview.insert('', 'end', text=self.hNameVar.get(), values=[self.hValueVar.get()])
         self.hNameVar.set("")
@@ -135,8 +147,9 @@ class App(TKMT.ThemedTKinterFrame):
     def del_header(self):
         sel = self.headerTreeview.selection()
         if len(sel) > 0:
-            self.headerTreeview.delete(sel[0])
             self.headers.pop(self.headerTreeview.item(sel[0])['text'])
+            self.headerTreeview.delete(sel[0])
+
 
     def update(self, _=None):
         sel = self.treeviewwidget.selection()
