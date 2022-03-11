@@ -1,8 +1,0 @@
-{
-    "baseurl": "https://www.thebluealliance.com/api/v3",
-    "requrl": "team/frc868/event/2022inkok/matches",
-    "params": {},
-    "headers": {
-        "X-TBA-Auth-Key": "YovqMOb3ds5HHwkMagG7SI7jx0rZxMtpO6clINNvP8PK4FXwRJaVMFjCLa620izS"
-    }
-}
