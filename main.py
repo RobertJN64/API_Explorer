@@ -104,12 +104,21 @@ class App(TKMT.ThemedTKinterFrame):
         if len(requrl) > 0 and requrl[0] == '/':
             requrl = requrl[1:]
 
+        if len(self.params) > 0:
+            for key, value in self.params.items():
+                if "?" in requrl:
+                    requrl += "&" + key + "=" + value
+                else:
+                    requrl += "?" + key + "=" + value
+
         r = requests.get(baseurl + '/' + requrl, headers=self.headers)
         data = r.json()
         udpate_treeview(self.treeviewwidget, make_treeview(data))
         self.reqDB[requrl] = data
 
         self.menu.add_command(label=requrl, command=partial(self.load_prev_req, requrl))
+        self.valueVar.set("")
+        self.keyVar.set("")
 
     def load_prev_req(self, name):
         udpate_treeview(self.treeviewwidget, make_treeview(self.reqDB[name]))
@@ -152,10 +161,24 @@ class App(TKMT.ThemedTKinterFrame):
 
 
     def update(self, _=None):
-        sel = self.treeviewwidget.selection()
-        if len(sel) > 0:
-            self.keyVar.set(self.treeviewwidget.item(sel[0])['text'])
-            self.valueVar.set(self.treeviewwidget.item(sel[0])['values'][0])
+        def addKey(key, text):
+            if key.isnumeric():
+                return "[" + key + "]" + text
+            else:
+                return '["' + key + '"]' + text
+
+        parent = self.treeviewwidget.selection()
+        if len(parent) > 0:
+            parent = parent[0]
+            self.valueVar.set(self.treeviewwidget.item(parent)['values'][0])
+            keytext = ""
+            while parent:
+                keytext = addKey(self.treeviewwidget.item(parent)['text'], keytext)
+                parent = self.treeviewwidget.parent(parent)
+
+            self.keyVar.set(keytext)
+
+
 
     def param_update(self, _=None):
         if self.pNameVar.get() == "" and self.pValueVar.get() == "":
