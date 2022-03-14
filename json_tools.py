@@ -50,7 +50,7 @@ def make_treeview(data, opendepth = 3, cdepth = 0):
     else:
         return data
 
-def udpate_treeview(tkwidget, data):
+def update_treeview(tkwidget, data):
     for item in tkwidget.get_children():
         tkwidget.delete(item)
 

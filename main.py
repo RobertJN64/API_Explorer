@@ -1,9 +1,18 @@
 import TKinterModernThemes as TKMT
 import tkinter as tk
 import requests
-from json_tools import make_treeview, udpate_treeview
+from json_tools import make_treeview, update_treeview
+from code_gen import generate_request_segment
 from functools import partial
 import json
+
+class PastRequest:
+    def __init__(self, baseurl, requrl, params, headers, treeviewdata):
+        self.baseurl = baseurl
+        self.requrl = requrl
+        self.params = params
+        self.headers = headers
+        self.treeviewdata = treeviewdata
 
 class App(TKMT.ThemedTKinterFrame):
     def __init__(self):
@@ -63,7 +72,9 @@ class App(TKMT.ThemedTKinterFrame):
 
 
         self.codeGen = self.notebook.addTab("Code Generator")
-        self.codeGen.Text("CODE GEN")
+        self.codeGen.Label("Generated Code: ", sticky='w')
+        self.codeGenBox = tk.Text(self.codeGen.master, height=15, width=70)
+        self.codeGenBox.grid()
 
         self.nextCol()
         self.respFrame = self.addLabelFrame("Response", rowspan=2)
@@ -113,15 +124,18 @@ class App(TKMT.ThemedTKinterFrame):
 
         r = requests.get(baseurl + '/' + requrl, headers=self.headers)
         data = r.json()
-        udpate_treeview(self.treeviewwidget, make_treeview(data))
-        self.reqDB[requrl] = data
+        update_treeview(self.treeviewwidget, make_treeview(data))
+        self.reqDB[requrl] = PastRequest(self.baseURL.get(), self.reqURL.get(), self.params, self.headers, data)
 
         self.menu.add_command(label=requrl, command=partial(self.load_prev_req, requrl))
         self.valueVar.set("")
         self.keyVar.set("")
+        self.update_codegen(self.baseURL.get(), self.reqURL.get(), self.params, self.headers)
 
     def load_prev_req(self, name):
-        udpate_treeview(self.treeviewwidget, make_treeview(self.reqDB[name]))
+        data = self.reqDB[name]
+        update_treeview(self.treeviewwidget, make_treeview(data.treeviewdata))
+        self.update_codegen(data.baseurl, data.requrl, data.params, data.headers)
 
     def add_param(self):
         if self.pNameVar.get() in self.params:
@@ -204,6 +218,11 @@ class App(TKMT.ThemedTKinterFrame):
         with open('savedata.json', 'w+') as f:
             json.dump(savedata, f, indent=4)
         TKMT.ThemedTKinterFrame.handleExit(self)
+
+    def update_codegen(self, baseurl, requrl, params, headers):
+        retval = generate_request_segment(baseurl, requrl, params, headers)
+        self.codeGenBox.delete(1.0, tk.END)
+        self.codeGenBox.insert(1.0, retval)
 
 if __name__ == '__main__':
     app = App()
