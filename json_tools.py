@@ -1,6 +1,27 @@
 from typing import List
 
-#TODO - search by non exact key and value
+def is_match(a: str, b:str, stage):
+    """
+    Returns true if items are equal enough
+    :param a: Search value
+    :param b: Match Value
+    :param stage: 0 = exact and numeric, 1 = first characters, 2 = anywhere
+    """
+    a = str(a).lower()
+    b = str(b).lower()
+    if len(a) == 0 or len(b) == 0:
+        return False
+    if stage == 0:
+        return a == b
+
+    if stage == 1:
+        if a.isnumeric() or b.isnumeric():
+            return False
+        return a == b[:len(a)]
+    if stage == 2:
+        if a.isnumeric() or b.isnumeric():
+            return False
+        return a in b
 
 class SearchManager:
     def __init__(self, searchableItems):
@@ -15,24 +36,26 @@ class SearchManager:
                 self.valueSearchIndex = index
 
     def get_next_key_match(self, key):
-        for index, item in enumerate(self.searchableItems[self.keySearchIndex+1:]):
-            if str(item.key).lower() == str(key).lower():
-                self.keySearchIndex += index + 1
-                return item
-        for index, item in enumerate(self.searchableItems):
-            if str(item.key).lower() == str(key).lower():
-                self.keySearchIndex = index
-                return item
+        for stage in range(0, 3):
+            for index, item in enumerate(self.searchableItems[self.keySearchIndex+1:]):
+                if is_match(key, item.key, stage):
+                    self.keySearchIndex += index + 1
+                    return item
+            for index, item in enumerate(self.searchableItems):
+                if is_match(key, item.key, stage):
+                    self.keySearchIndex = index
+                    return item
 
     def get_next_value_match(self, value):
-        for index, item in enumerate(self.searchableItems[self.valueSearchIndex + 1:]):
-            if str(item.value).lower() == str(value).lower():
-                self.valueSearchIndex += index + 1
-                return item
-        for index, item in enumerate(self.searchableItems):
-            if str(item.value).lower() == str(value).lower():
-                self.valueSearchIndex = index
-                return item
+        for stage in range(0, 2):
+            for index, item in enumerate(self.searchableItems[self.valueSearchIndex + 1:]):
+                if is_match(value, item.value, stage):
+                    self.valueSearchIndex += index + 1
+                    return item
+            for index, item in enumerate(self.searchableItems):
+                if is_match(value, item.value, stage):
+                    self.valueSearchIndex = index
+                    return item
 
 
 class SearchableItem:
@@ -85,7 +108,7 @@ def make_treeview(data, opendepth = 3, cdepth = 0, keystring=''):
                     t = "Dictionary"
                 out.append({"key": str(index), "type": t, "value":'',
                             "subentry": retval, 'open': cdepth < opendepth,
-                            'keystring': keystring + '[' + str(index) + '"]'})
+                            'keystring': keystring + '[' + str(index) + ']'})
 
             elif isinstance(item, list):
                 if len(item) == 0:
@@ -94,11 +117,11 @@ def make_treeview(data, opendepth = 3, cdepth = 0, keystring=''):
                     t = "List"
                 out.append({"key": str(index), "type": t, "value":"",
                             "subentry": retval, 'open': cdepth < opendepth,
-                            'keystring': keystring + '[' + str(index) + '"]'})
+                            'keystring': keystring + '[' + str(index) + ']'})
 
             else:
                 out.append({"key": str(index), "value": retval, "type": type(retval).__name__,
-                            'keystring': keystring + '[' + str(index) + '"]'})
+                            'keystring': keystring + '[' + str(index) + ']'})
         return out
 
     else:
