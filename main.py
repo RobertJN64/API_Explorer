@@ -127,7 +127,8 @@ class App(TKMT.ThemedTKinterFrame):
         r = requests.get(baseurl + '/' + requrl, headers=self.headers)
         data = r.json()
         update_treeview(self.treeviewwidget, make_treeview(data))
-        self.reqDB[requrl] = PastRequest(self.baseURL.get(), self.reqURL.get(), self.params, self.headers, data)
+        self.reqDB[requrl] = PastRequest(self.baseURL.get(), self.reqURL.get(),
+                                         self.params.copy(), self.headers.copy(), data)
 
         self.menu.add_command(label=requrl, command=partial(self.load_prev_req, requrl))
         self.valueVar.set("")
