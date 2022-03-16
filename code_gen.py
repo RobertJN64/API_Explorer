@@ -1,11 +1,13 @@
 class CodeGenInfo:
-    def __init__(self, baseurl, requrl, params, headers):
+    def __init__(self, baseurl, requrl, params, headers, data):
         self.baseurl = baseurl
         self.requrl = requrl
         self.params = params
         self.headers = headers
+        self.data = data
         self.searchKey = None
         self.searchValue = None
+
 
 def generate_request_segment(codeGenInfo: CodeGenInfo):
     """

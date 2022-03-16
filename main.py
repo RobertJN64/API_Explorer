@@ -1,18 +1,10 @@
 import TKinterModernThemes as TKMT
 import tkinter as tk
 import requests
-from json_tools import make_treeview, update_treeview
+from json_tools import make_treeview, update_treeview, SearchManager
 from code_gen import generate_request_segment, CodeGenInfo
 from functools import partial
 import json
-
-class PastRequest:
-    def __init__(self, baseurl, requrl, params, headers, treeviewdata):
-        self.baseurl = baseurl
-        self.requrl = requrl
-        self.params = params
-        self.headers = headers
-        self.treeviewdata = treeviewdata
 
 class App(TKMT.ThemedTKinterFrame):
     def __init__(self):
@@ -22,6 +14,7 @@ class App(TKMT.ThemedTKinterFrame):
         #GLOBAL INFO
         self.reqDB = {}
         self.codeGenInfo = None
+        self.searchManager: SearchManager = SearchManager([])
 
         #ACTIVE REQUEST
         with open('savedata.json') as f:
@@ -33,6 +26,7 @@ class App(TKMT.ThemedTKinterFrame):
         self.params = savedata['params']
 
         #Response Search Feature
+        self.keyStringVar = tk.StringVar()
         self.keyVar = tk.StringVar()
         self.valueVar = tk.StringVar()
 
@@ -83,7 +77,7 @@ class App(TKMT.ThemedTKinterFrame):
         self.nextCol()
         respFrame = self.addLabelFrame("Response", rowspan=2)
         self.treeviewwidget = respFrame.Treeview(['key', 'value', 'type'], [400, 120, 80], 15, {},
-                                                      'subentry', openkey='open', colspan=2)
+                                                      'subentry', openkey='open', colspan=3)
 
         self.treeviewwidget.bind('<KeyRelease>', self.update)
         self.treeviewwidget.bind('<ButtonRelease>', self.update)
@@ -93,12 +87,16 @@ class App(TKMT.ThemedTKinterFrame):
         self.headerTreeview.bind('<ButtonRelease>', self.header_update)
 
         respFrame.Text("Selected Key:")
-        respFrame.Entry(self.keyVar, col=1, widgetkwargs={'width': 60})
+        respFrame.Entry(self.keyVar, col=1, widgetkwargs={'width': 40})
+        respFrame.Button("Search / Next", self.search_by_key, col=2)
         respFrame.Text("Selected Value:")
-        respFrame.Entry(self.valueVar, col = 1, widgetkwargs={'width': 60})
+        respFrame.Entry(self.valueVar, col = 1, widgetkwargs={'width': 40})
+        respFrame.Button("Search / Next", self.search_by_value, col=2)
+        respFrame.Text("Key String: ")
+        respFrame.Entry(self.keyStringVar, col = 1, widgetkwargs={'width': 60}, colspan=2)
 
         self.menu = tk.Menu(self.master)
-        respFrame.MenuButton(self.menu, "Load previous request:", colspan=2)
+        respFrame.MenuButton(self.menu, "Load previous request:", colspan=3)
 
         for key, value in self.headers.items():
             self.headerTreeview.insert('', 'end', text=key, values=[value])
@@ -126,20 +124,20 @@ class App(TKMT.ThemedTKinterFrame):
 
         r = requests.get(baseurl + '/' + requrl, headers=self.headers)
         data = r.json()
-        update_treeview(self.treeviewwidget, make_treeview(data))
-        self.reqDB[requrl] = PastRequest(self.baseURL.get(), self.reqURL.get(),
-                                         self.params.copy(), self.headers.copy(), data)
+        self.searchManager = update_treeview(self.treeviewwidget, make_treeview(data))
+        self.codeGenInfo = CodeGenInfo(self.baseURL.get(), self.reqURL.get(),
+                                       self.params.copy(), self.headers.copy(), data)
+        self.reqDB[requrl] = self.codeGenInfo
 
         self.menu.add_command(label=requrl, command=partial(self.load_prev_req, requrl))
         self.valueVar.set("")
+        self.keyStringVar.set("")
         self.keyVar.set("")
-        self.codeGenInfo = CodeGenInfo(self.baseURL.get(), self.reqURL.get(), self.params, self.headers)
         self.update_codegen()
 
     def load_prev_req(self, name):
-        data = self.reqDB[name]
-        update_treeview(self.treeviewwidget, make_treeview(data.treeviewdata))
-        self.codeGenInfo = CodeGenInfo(data.baseurl, data.requrl, data.params, data.headers)
+        self.codeGenInfo = self.reqDB[name]
+        self.searchManager = update_treeview(self.treeviewwidget, make_treeview(self.codeGenInfo.data))
         self.update_codegen()
 
     def add_param(self):
@@ -180,25 +178,16 @@ class App(TKMT.ThemedTKinterFrame):
 
 
     def update(self, _=None):
-        def addKey(key, text):
-            if key.isnumeric():
-                return "[" + key + "]" + text
-            else:
-                return '["' + key + '"]' + text
-
         parent = self.treeviewwidget.selection()
         if len(parent) > 0:
             parent = parent[0]
             valueText = self.treeviewwidget.item(parent)['values'][0]
             self.valueVar.set(valueText)
+            self.keyVar.set(self.treeviewwidget.item(parent)['text'])
             self.codeGenInfo.searchValue = valueText
-            keytext = ""
-            while parent:
-                keytext = addKey(self.treeviewwidget.item(parent)['text'], keytext)
-                parent = self.treeviewwidget.parent(parent)
-
-            self.keyVar.set(keytext)
-            self.codeGenInfo.searchKey = keytext
+            self.keyStringVar.set(parent)
+            self.codeGenInfo.searchKey = parent
+            self.searchManager.set_index_by_keystring(parent)
             self.update_codegen()
 
     def param_update(self, _=None):
@@ -220,6 +209,28 @@ class App(TKMT.ThemedTKinterFrame):
             retval = generate_request_segment(self.codeGenInfo)
             self.codeGenBox.delete(1.0, tk.END)
             self.codeGenBox.insert(1.0, retval)
+
+    def search_by_key(self):
+        item = self.searchManager.get_next_key_match(self.keyVar.get())
+        if item is not None:
+            self.keyVar.set(item.key)
+            self.valueVar.set(item.value)
+            self.keyStringVar.set(item.keystring)
+            self.codeGenInfo.searchKey = item.keystring
+            self.codeGenInfo.searchValue = item.value
+            self.treeviewwidget.selection_set([item.keystring])
+            self.update_codegen()
+
+    def search_by_value(self):
+        item = self.searchManager.get_next_value_match(self.valueVar.get())
+        if item is not None:
+            self.keyVar.set(item.key)
+            self.valueVar.set(item.value)
+            self.keyStringVar.set(item.keystring)
+            self.codeGenInfo.searchKey = item.keystring
+            self.codeGenInfo.searchValue = item.value
+            self.treeviewwidget.selection_set([item.keystring])
+            self.update_codegen()
 
     def handleExit(self):
         savedata = {
