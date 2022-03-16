@@ -1,4 +1,13 @@
-def generate_request_segment(baseurl, requrl, params, headers):
+class CodeGenInfo:
+    def __init__(self, baseurl, requrl, params, headers):
+        self.baseurl = baseurl
+        self.requrl = requrl
+        self.params = params
+        self.headers = headers
+        self.searchKey = None
+        self.searchValue = None
+
+def generate_request_segment(codeGenInfo: CodeGenInfo):
     """
     Generates a code segment for making a rest API request.
     """
@@ -19,12 +28,14 @@ def generate_request_segment(baseurl, requrl, params, headers):
     respJSON = repsonse.json()
     """
 
-    retval = 'import requests\n\nbaseurl = "' + baseurl + '"'
+    requrl = codeGenInfo.requrl
+    retval = 'import requests\n\nbaseurl = "' + codeGenInfo.baseurl + '"'
     if len(requrl) > 0 and requrl[0] == '/':
         requrl = requrl[1:]
     retval += '\nrequrl = "' + requrl + '"'
 
     #headers
+    headers = codeGenInfo.headers
     if len(headers) > 0:
         retval += '\n\nheaders = {' + '\n'
         for index, (key, value) in enumerate(headers.items()):
@@ -32,6 +43,7 @@ def generate_request_segment(baseurl, requrl, params, headers):
         retval += '}\n'
 
     #params
+    params = codeGenInfo.params
     pstring = ""
     if len(params) > 0:
         retval += '\n'
@@ -49,4 +61,14 @@ def generate_request_segment(baseurl, requrl, params, headers):
     retval += ('\nresponse = requests.get(baseurl + "/" + requrl' + ' + pstring' * (len(params) > 0) +
               ', headers=headers' * (len(headers) > 0) +
               ')')
+    retval += '\ndata = response.json()'
+
+    if codeGenInfo.searchKey is not None and codeGenInfo.searchValue is not None:
+        itemName = 'item'
+        sKey = codeGenInfo.searchKey
+        items = [item.replace("]", "").replace('"', "").replace('"', "") for item in sKey.split('[')[1:]]
+        for item in items:
+            if not item.isnumeric():
+                itemName = item
+        retval += '\n' + itemName + ' = data' + sKey
     return retval
